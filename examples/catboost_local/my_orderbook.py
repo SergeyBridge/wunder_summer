@@ -28,12 +28,12 @@ class MyOrderBook:
 
         self._cat_features = []
 
-        global STOPPER
+        # global STOPPER
 
-        if 2 < STOPPER < 5:
-            print(f" {STOPPER} clear ")
-            print(self._last_deals)
-        STOPPER += 1
+        # if 2 < STOPPER < 5:
+        #     print(f" {STOPPER} clear ")
+        #     print(self._last_deals)
+        # STOPPER += 1
 
         self._last_deals = pd.DataFrame(np.full(shape=[30, 7], fill_value=np.nan),  #, dtype=np.int_),
             columns=["time", "action", "type", "side", "price",

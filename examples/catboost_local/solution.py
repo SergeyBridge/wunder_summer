@@ -27,7 +27,7 @@ def process_event_and_predict_proba(event, orderbook):
     if not event.need_prediction:
         return None
     
-    features = catboost_myob.get_features(orderbook, max_index=13)
+    features = catboost_myob.get_features(event, orderbook, max_index=13)
 
     proba = clf.predict([features])[0]
 
