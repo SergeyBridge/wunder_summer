@@ -35,7 +35,7 @@ class MyOrderBook:
         #     print(self._last_deals)
         # STOPPER += 1
 
-        self._last_deals = pd.DataFrame(np.full(shape=[30, 7], fill_value=np.nan),  #, dtype=np.int_),
+        self._last_deals = pd.DataFrame(np.full(shape=[130, 7], fill_value=np.nan),  #, dtype=np.int_),
             columns=["time", "action", "type", "side", "price",
                      "amount", "is_snapshot",], )  # .convert_dtypes()
 
