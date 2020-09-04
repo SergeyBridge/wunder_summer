@@ -3,4 +3,4 @@ sortedcontainers
 zipp==3.1.0
 cmake
 pystan
-scorer
+# scorer
