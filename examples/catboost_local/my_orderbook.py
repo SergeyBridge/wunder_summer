@@ -50,6 +50,8 @@ class MyOrderBook:
         self._deleted_orders = queue_df.copy()
         self._modified_orders = queue_df.copy()
 
+        self.last_deals_reference = [None, None]
+
     def set_action_delete_order(self, deleted_order):
         self._event_to_queue_forward(event=deleted_order, queue=self._deleted_orders)
     def set_action_add_order(self, added_order):
@@ -88,66 +90,80 @@ class MyOrderBook:
         queue.index = ind
         queue.sort_index(inplace=True)
 
-    def get_features(self, event, orderbook, max_index=13):
+    def get_features(self, event, oredrbook_fast, max_index=13):
         '''
             Считаем фичи :
         '''
 
-        features = self._my_get_simple_deals_features(event, orderbook)
+        features = self._my_get_simple_deals_features(event, oredrbook_fast)
 
-        spread = orderbook.get_best_price(SIDE_ASK) - orderbook.get_best_price(SIDE_BID)
+        spread = oredrbook_fast.get_best_price(SIDE_ASK) - oredrbook_fast.get_best_price(SIDE_BID)
         features += [spread]
 
         for side in (SIDE_BID, SIDE_ASK):
             for ix in range(max_index):
-                price_level = orderbook.get_price_level_at_ix(side, ix)
+                price_level = oredrbook_fast.get_price_level_at_ix(side, ix)
                 if price_level is None:
                     features += [-1, -1]
                 else:
                     features += [price_level.get_volume(), price_level.get_num_orders()]
 
-        for com in np.linspace(start=0, stop=2, num=5):
-            features.append(self._last_deals.price.ewm(com=com, ignore_na=True).mean().mean())
-            features.append(self._last_deals.amount.ewm(com=com, ignore_na=True).mean().mean())
-            price_mult_amount = self._last_deals.price * self._last_deals.amount
+        features += self._get_ewm_from_queue(self._last_deals)
+        features += self._get_ewm_from_queue(self._added_orders)
+        features += self._get_ewm_from_queue(self._deleted_orders)
+        features += self._get_ewm_from_queue(self._modified_orders)
+
+        # if event.action == ACTION_DEAL:
+        #     self.last_deals_reference[event.side] = event
+        #     features += self._get_simple_deals_features(event, oredrbook_fast)
+
+        features +=self._get_simple_features_from_orderbook(oredrbook_fast)
+
+
+
+        return features
+
+
+    def _get_ewm_from_queue(self, queue):
+        features = []
+        for com in [0.2, .4, .8, 1.2, 1.5, 2, 4, 6, 10]:
+            features.append(queue.price.ewm(com=com, ignore_na=True).mean().mean())
+            features.append(queue.amount.ewm(com=com, ignore_na=True).mean().mean())
+            price_mult_amount = queue.price * queue.amount
             features.append(price_mult_amount.ewm(com=com, ignore_na=True).mean().mean())
             features.append(np.log(price_mult_amount).ewm(com=com, ignore_na=True).mean().mean())
 
-        bids_count = sum(self._last_deals.side == 0)
-        ask_count = sum(self._last_deals.side == 1)
-        if ask_count == 0:
-            ask_count = 0.5
+            bids_volume = sum(price_mult_amount[self._last_deals.side == 0])
+            ask_volume = sum(price_mult_amount[self._last_deals.side == 1])
 
-        features += [bids_count / ask_count]
+            if ask_volume == 0:
+                ask_volume = 0.5
+            features += [bids_volume / ask_volume]
 
-        bids_volume = sum(price_mult_amount[self._last_deals.side == 0])
-        ask_volume = sum(price_mult_amount[self._last_deals.side == 1])
-
-        if ask_volume == 0:
-            ask_volume = 0.5
-
-        features += [bids_volume / ask_volume]
-
+            bids_count = sum(self._last_deals.side == 0)
+            ask_count = sum(self._last_deals.side == 1)
+            if ask_count == 0:
+                ask_count = 0.5
+            features += [bids_count / ask_count]
 
         return features
-
-    def get_simple_deals_features(self, last_deals, orderbook):
-        '''
-            Считаем простые фичи по последним сделкам:
-        '''
-        cur_mean_price = orderbook.get_mean_price()
-        cur_time = orderbook.get_time()
-
-        features = []
-        for side in (SIDE_BID, SIDE_ASK):
-            deal_event = last_deals[side]
-            if deal_event is None:
-                features += [-1e9, -1e9, -1e9]
-            else:
-                features += [cur_mean_price - deal_event.price,
-                             cur_time - deal_event.time,
-                             deal_event.amount]
-        return features
+        
+    # def get_simple_deals_features(self, last_deals, orderbook):
+    #     '''
+    #         Считаем простые фичи по последним сделкам:
+    #     '''
+    #     cur_mean_price = orderbook.get_mean_price()
+    #     cur_time = orderbook.get_time()
+    #     features = []
+    #     for side in (SIDE_BID, SIDE_ASK):
+    #         deal_event = last_deals[side]
+    #         if deal_event is None:
+    #             features += [-1e9, -1e9, -1e9]
+    #         else:
+    #             features += [cur_mean_price - deal_event.price,
+    #                          cur_time - deal_event.time,
+    #                          deal_event.amount]
+    #     return features
 
     def _my_get_simple_deals_features(self, deal, orderbook):
         '''
@@ -166,6 +182,22 @@ class MyOrderBook:
         ]
 
         return result
+
+    def _get_simple_features_from_orderbook(self, oredrbook_fast, max_index=13):
+        '''
+            Считаем простые фичи по ордербуку:
+        '''
+        spread = oredrbook_fast.get_best_price(SIDE_ASK) - oredrbook_fast.get_best_price(SIDE_BID)
+        features = [spread]
+        for side in (SIDE_BID, SIDE_ASK):
+            for ix in range(max_index):
+                price_level = oredrbook_fast.get_price_level_at_ix(side, ix)
+                if price_level is None:
+                    features += [-1, -1]
+                else:
+                    features += [price_level.get_volume(),
+                                 price_level.get_num_orders()]
+        return features
 
     @property
     def cat_features(self):
