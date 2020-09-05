@@ -30,14 +30,15 @@ def collect_dataset(data_path):
                     total=len(event_player),
                     desc=f"collecting dataset {data_path}"):
 
-        catboost_myob.__getattribute__(action_handler[ev.action])
+        if not ev.is_snapshot:
+            catboost_myob.__getattribute__(action_handler[ev.action])
 
-        orderbook_fast.apply_event(ev)
-        if ev.need_prediction:
-            features = catboost_myob.get_features(ev, orderbook_fast)
+            orderbook_fast.apply_event(ev)
+            if ev.need_prediction:
+                features = catboost_myob.get_features(ev, orderbook_fast)
 
-            X.append(features)
-            Y.append(ev.Y)
+                X.append(features)
+                Y.append(ev.Y)
 
     print(f"Dataset collected: len(X) = {len(X)}")
     return pd.DataFrame(X), pd.DataFrame(Y)
