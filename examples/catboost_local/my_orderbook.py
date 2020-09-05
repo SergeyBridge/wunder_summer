@@ -7,8 +7,15 @@ import numpy as np
 sys.path.append("../../scorer")
 from orderbook_fast import Event, OrderBook
 
+ACTION_DELETE = 0
+ACTION_ADD = 1
+ACTION_MODIFY_AMOUNT = 2
+ACTION_DEAL = 3
+ACTION_NEW_CHUNK = 10
+
 SIDE_BID = 0
 SIDE_ASK = 1
+
 
 STOPPER = 0
 
@@ -20,7 +27,7 @@ class MyOrderBook:
     def __init__(self):
         self.clear()
 
-    def clear(self):
+    def clear(self, _=None):
         """
         Reset all class variables in the beginning of every chunk action=10
         :return: None
@@ -35,11 +42,21 @@ class MyOrderBook:
         #     print(self._last_deals)
         # STOPPER += 1
 
-        self._last_deals = pd.DataFrame(np.full(shape=[130, 7], fill_value=np.nan),  #, dtype=np.int_),
+        queue_df = pd.DataFrame(np.full(shape=[130, 7], fill_value=np.nan),
             columns=["time", "action", "type", "side", "price",
-                     "amount", "is_snapshot",], )  # .convert_dtypes()
+                     "amount", "is_snapshot",], )
+        self._last_deals = queue_df.copy()
+        self._added_orders = queue_df.copy()
+        self._deleted_orders = queue_df.copy()
+        self._modified_orders = queue_df.copy()
 
-    def set_last_deal(self, last_deal):
+    def set_action_delete_order(self, deleted_order):
+        self._event_to_queue_forward(event=deleted_order, queue=self._deleted_orders)
+    def set_action_add_order(self, added_order):
+        self._event_to_queue_forward(event=added_order, queue=self._added_orders)
+    def set_action_modify_amount(self, modified_order):
+        self._event_to_queue_forward(event=modified_order, queue=self._modified_orders)
+    def set_action_deal(self, last_deal):
         self._event_to_queue_forward(event=last_deal, queue=self._last_deals)
 
     def _event_to_np(self, ev):
@@ -154,6 +171,14 @@ class MyOrderBook:
     def cat_features(self):
         return [0, 1, 2, 3]
 
+
+action_handler = {
+    ACTION_DELETE: "set_action_delete_order",
+    ACTION_ADD: "set_action_add_order",
+    ACTION_MODIFY_AMOUNT: "set_action_modify_amount",
+    ACTION_DEAL: "set_action_deal",
+    ACTION_NEW_CHUNK: "clear",
+}
 
 
 

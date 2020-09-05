@@ -5,12 +5,8 @@ import catboost
 sys.path.append("../../scorer")
 import orderbook_fast as ob
 
-
-from my_orderbook import MyOrderBook
-
-# SIDE_BID = 0
-# SIDE_ASK = 1
-
+# import my_orderbook
+from my_orderbook import MyOrderBook, action_handler
 catboost_myob = MyOrderBook()
 
 
@@ -19,17 +15,15 @@ clf.load_model(fname="wunder.model")
 
 def process_event_and_predict_proba(event, orderbook):
 
-    if event.action == ob.Action.DEAL:
-        catboost_myob.set_last_deal(event)
-    elif event.action == ob.Action.NEW_CHUNK:
-        catboost_myob.clear()
+
+    catboost_myob.__getattribute__(action_handler[event.action])
 
     if not event.need_prediction:
         return None
-    
+
     features = catboost_myob.get_features(event, orderbook, max_index=13)
 
-    proba = clf.predict([features])[0]
+    proba = clf.predict_proba([features])[0, 1]
 
     return proba
 
