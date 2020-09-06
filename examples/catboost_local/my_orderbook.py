@@ -107,8 +107,7 @@ class MyOrderBook:
         '''
 
         features = self._my_get_simple_deals_features(event)
-        to_add = self._get_ewm_from_queue(self._last_deals)
-        features.append(to_add)
+        features += self._get_ewm_from_queue(self._last_deals)
 
         return features
 
@@ -117,8 +116,8 @@ class MyOrderBook:
         features = []
         for com in [0.2, .4, .8, 1.2, 1.5, 2, 4, 6, 10]:
             # features.append(queue.ewm(com=com, ignore_na=True).mean())
-            to_add = list(queue.ewm(com=com, ignore_na=True).mean().mean().values.ravel())
-            features +=to_add
+            features += list(queue.ewm(com=com, ignore_na=True).mean().mean().values.ravel())
+
 
 
         return features
