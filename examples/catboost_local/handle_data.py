@@ -56,11 +56,11 @@ if __name__ == "__main__":
     print(f"curdir: {Path.cwd()}")
 
 
-    X_train80, Y_train80 = collect_dataset("../../data/train80.npz")
+    X_train80, Y_train80 = collect_dataset("../../data/train80_nosnapshots.npz")
     X_train80.to_pickle("../../data/X_train80_130.pickle")
     Y_train80.to_pickle("../../data/Y_train80_130.pickle")
 
-    X_test20, Y_test20 = collect_dataset("../../data/test20.npz")
+    X_test20, Y_test20 = collect_dataset("../../data/test20_nosnapshots.npz")
     X_test20.to_pickle("../../data/X_test20_130.pickle")
     Y_test20.to_pickle("../../data/Y_test20_130.pickle")
 
