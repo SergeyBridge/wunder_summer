@@ -1,2 +1,4 @@
 wunder.model
 *.zip
+*.npz
+*.pickle
