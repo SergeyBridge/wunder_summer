@@ -21,7 +21,7 @@ def collect_dataset(data_path):
 
     global catboost_myob
     event_player = ob_fast.EventPlayer(data_path)
-    orderbook_fast = ob_fast.OrderBook()
+    # orderbook_fast = ob_fast.OrderBook()
 
     X = []
     Y = []
@@ -30,15 +30,12 @@ def collect_dataset(data_path):
                     total=len(event_player),
                     desc=f"collecting dataset {data_path}"):
 
-        if not ev.is_snapshot:
-            catboost_myob.__getattribute__(action_handler[ev.action])
+        catboost_myob.__getattribute__(action_handler[ev.action])(ev)
 
-            orderbook_fast.apply_event(ev)
-            if ev.need_prediction:
-                features = catboost_myob.get_features(ev, orderbook_fast)
+        features = catboost_myob.get_features(ev)
 
-                X.append(features)
-                Y.append(ev.Y)
+        X.append(features)
+        Y.append(ev.Y)
 
     print(f"Dataset collected: len(X) = {len(X)}")
     return pd.DataFrame(X), pd.DataFrame(Y)
@@ -55,16 +52,12 @@ def collect_dataset(data_path):
 if __name__ == "__main__":
     print(f"curdir: {Path.cwd()}")
 
+    X_train, Y_train = collect_dataset("../../data/X_train_small_A.npz")
+    X_train.to_pickle("../../data/X_train_corrected_deals.pickle")
+    Y_train.to_pickle("../../data/Y_train_corrected_deals.pickle")
 
-    X_train80, Y_train80 = collect_dataset("../../data/train80_nosnapshots.npz")
-    X_train80.to_pickle("../../data/X_train80_130.pickle")
-    Y_train80.to_pickle("../../data/Y_train80_130.pickle")
+    X_test, Y_test = collect_dataset("../../data/X_train_small_B.npz")
+    X_test.to_pickle("../../data/X_test_corrected_deals.pickle")
+    Y_test.to_pickle("../../data/Y_test_corrected_deals.pickle")
 
-    X_test20, Y_test20 = collect_dataset("../../data/test20_nosnapshots.npz")
-    X_test20.to_pickle("../../data/X_test20_130.pickle")
-    Y_test20.to_pickle("../../data/Y_test20_130.pickle")
-
-    print("X_train_very_small_A, Y_train_very_small_A", X_train80, Y_train80)
-    print("X_test_very_small_B, Y_test_very_small_B", X_test20, Y_test20)
-
-    print( "********* FINISH dataset collection ***********************")
+    print("********* FINISH dataset collection ***********************")
